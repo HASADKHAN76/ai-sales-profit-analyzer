@@ -1,0 +1,26 @@
+date,product,price,cost,quantity,customer
+2026-01-05,Laptop Pro,1299.99,850.00,2,Alice Johnson
+2026-01-07,Wireless Mouse,29.99,12.50,5,Bob Smith
+2026-01-10,USB-C Cable,15.99,5.00,10,Charlie Brown
+2026-01-12,Laptop Pro,1299.99,850.00,1,Diana Prince
+2026-01-15,Mechanical Keyboard,89.99,45.00,3,Eve Wilson
+2026-01-18,Monitor 27",349.99,200.00,2,Alice Johnson
+2026-01-20,Wireless Mouse,29.99,12.50,8,Frank Castle
+2026-01-22,USB-C Cable,15.99,5.00,15,Grace Hopper
+2026-01-25,Laptop Pro,1299.99,850.00,1,Bob Smith
+2026-01-28,Mechanical Keyboard,89.99,45.00,2,Diana Prince
+2026-02-02,Monitor 27",349.99,200.00,3,Charlie Brown
+2026-02-05,Wireless Mouse,29.99,12.50,12,Eve Wilson
+2026-02-08,USB-C Cable,15.99,5.00,20,Alice Johnson
+2026-02-10,Laptop Pro,1299.99,850.00,2,Frank Castle
+2026-02-15,Mechanical Keyboard,89.99,45.00,4,Grace Hopper
+2026-02-18,Monitor 27",349.99,200.00,1,Bob Smith
+2026-02-20,Wireless Mouse,29.99,12.50,6,Diana Prince
+2026-02-22,USB-C Cable,15.99,5.00,25,Charlie Brown
+2026-02-25,Laptop Pro,1299.99,850.00,1,Eve Wilson
+2026-02-28,Mechanical Keyboard,89.99,45.00,3,Alice Johnson
+2026-03-03,Monitor 27",349.99,200.00,2,Frank Castle
+2026-03-05,Wireless Mouse,29.99,12.50,10,Grace Hopper
+2026-03-08,USB-C Cable,15.99,5.00,18,Bob Smith
+2026-03-10,Laptop Pro,1299.99,850.00,3,Diana Prince
+2026-03-12,Mechanical Keyboard,89.99,45.00,5,Charlie Brown
