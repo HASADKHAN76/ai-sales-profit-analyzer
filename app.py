@@ -724,7 +724,7 @@ with tab_dash:
             mode="lines", name="Margin %",
             line=dict(color=C["indigo"], width=2.5),
             fill="tozeroy",
-            fillcolor=f"{C['indigo']}22",
+            fillcolor="rgba(99,102,241,0.13)",
             hovertemplate="<b>%{x}</b><br>Margin: %{y:.1f}%<extra></extra>",
         )
         fig_margin.add_scatter(
