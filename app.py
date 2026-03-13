@@ -1029,13 +1029,23 @@ with tab_data:
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_chat:
 
+    # ── process a suggestion-button click queued from a previous run ────────
+    if st.session_state.get("_pending_q"):
+        _pq = st.session_state.pop("_pending_q")
+        st.session_state["chat_history"].append({"role": "user", "content": _pq})
+        try:
+            _reply = assistant.chat(_pq)
+        except Exception as _e:
+            _reply = f"Sorry, I encountered an error: {_e}"
+        st.session_state["chat_history"].append({"role": "assistant", "content": _reply})
+
     col_chat, col_ctx = st.columns([3, 2])
 
     with col_chat:
-        # Status banner
+        # ── Status banner ───────────────────────────────────────────────────
         if api_active:
             st.markdown(f"""
-            <div style="background:{C["emerald"]}15;border:1px solid {C["emerald"]}40;
+            <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);
                         border-radius:10px;padding:.55rem 1rem;margin-bottom:.8rem;
                         display:flex;align-items:center;gap:.5rem">
                 <span class="status-dot dot-green"></span>
@@ -1044,15 +1054,20 @@ with tab_chat:
             </div>""", unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            <div style="background:{C["amber"]}15;border:1px solid {C["amber"]}40;
+            <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
                         border-radius:10px;padding:.55rem 1rem;margin-bottom:.8rem;
                         display:flex;align-items:center;gap:.5rem">
                 <span class="status-dot dot-amber"></span>
                 <span style="font-size:.78rem;color:{C["amber"]};font-weight:600">Rule-based Mode</span>
-                <span style="font-size:.72rem;color:{C["muted"]};margin-left:.3rem">Add OpenAI key for GPT answers</span>
+                <span style="font-size:.72rem;color:{C["muted"]};margin-left:.3rem">Add OpenAI key in sidebar for GPT answers</span>
             </div>""", unsafe_allow_html=True)
 
-        # Suggested question pills
+        # ── Suggestion buttons ──────────────────────────────────────────────
+        st.markdown("""<div class="section-header">
+            <div class="section-dot"></div>
+            <div class="section-title">Quick Questions</div>
+        </div>""", unsafe_allow_html=True)
+
         suggestions = [
             "Which month had the highest profit?",
             "Which product sells the most?",
@@ -1061,96 +1076,72 @@ with tab_chat:
             "Show the monthly revenue trend.",
             "Why did revenue change between months?",
         ]
-
-        st.markdown("""<div class="section-header">
-            <div class="section-dot"></div>
-            <div class="section-title">Quick Questions</div>
-        </div>""", unsafe_allow_html=True)
-
         btn_cols = st.columns(3)
         for i, q in enumerate(suggestions):
             if btn_cols[i % 3].button(q, key=f"sug_{i}", use_container_width=True):
-                st.session_state["chat_history"].append({"role": "user", "content": q})
-                with st.spinner("Analyzing…"):
-                    reply = assistant.chat(q)
-                st.session_state["chat_history"].append({"role": "assistant", "content": reply})
+                # Queue question; processing happens at top of tab on next run
+                st.session_state["_pending_q"] = q
                 st.rerun()
 
-        # Chat history
+        # ── Chat history via native st.chat_message ─────────────────────────
         st.markdown("""<div class="section-header">
             <div class="section-dot"></div>
             <div class="section-title">Conversation</div>
         </div>""", unsafe_allow_html=True)
 
-        chat_html = '<div class="chat-wrap">'
         if not st.session_state["chat_history"]:
-            chat_html += f"""
-            <div style="text-align:center;padding:2rem;color:{C["muted"]};font-size:.85rem">
-                <div style="font-size:2rem;margin-bottom:.5rem">🤖</div>
-                Ask me anything about your sales dataset.<br>
-                Click a quick question above or type below.
-            </div>"""
-        for msg in st.session_state["chat_history"]:
-            if msg["role"] == "user":
-                chat_html += f"""
-                <div class="chat-row user">
-                    <div class="avatar-user chat-avatar">👤</div>
-                    <div><div class="chat-bubble bubble-user">{msg["content"]}</div></div>
-                </div>"""
-            else:
-                content = msg["content"].replace("\n", "<br>").replace("**", "<b>", 1)
-                # quick bold toggle
-                import re as _re
-                content = _re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', msg["content"])
-                content = content.replace("\n", "<br>")
-                chat_html += f"""
-                <div class="chat-row">
-                    <div class="avatar-bot chat-avatar">🤖</div>
-                    <div><div class="chat-bubble bubble-bot">{content}</div></div>
-                </div>"""
-        chat_html += "</div>"
-        st.markdown(chat_html, unsafe_allow_html=True)
-
-        # Input row
-        with st.form("chat_form", clear_on_submit=True):
-            inp_col, btn_col = st.columns([5, 1])
-            user_input = inp_col.text_input(
-                "message", placeholder="Ask a business question about your data…",
-                label_visibility="collapsed",
+            st.markdown(
+                f'<div style="text-align:center;padding:2rem;color:{C["muted"]};'
+                f'font-size:.85rem;background:{C["surface"]};border:1px solid {C["border"]};'
+                f'border-radius:12px">'
+                f'<div style="font-size:2rem;margin-bottom:.5rem">🤖</div>'
+                f'Ask me anything about your sales dataset.<br>'
+                f'Click a quick question above or type below.</div>',
+                unsafe_allow_html=True,
             )
-            submitted = btn_col.form_submit_button("Send", use_container_width=True)
+        else:
+            for msg in st.session_state["chat_history"]:
+                avatar = "🤖" if msg["role"] == "assistant" else "👤"
+                with st.chat_message(msg["role"], avatar=avatar):
+                    st.markdown(msg["content"])
 
-        if submitted and user_input.strip():
-            st.session_state["chat_history"].append({"role": "user", "content": user_input})
-            with st.spinner("Thinking…"):
-                reply = assistant.chat(user_input)
+        # ── st.chat_input — does NOT reset tab selection on submit ──────────
+        if prompt := st.chat_input("Ask a business question about your data…"):
+            st.session_state["chat_history"].append({"role": "user", "content": prompt})
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(prompt)
+            with st.chat_message("assistant", avatar="🤖"):
+                with st.spinner("Analyzing…"):
+                    try:
+                        reply = assistant.chat(prompt)
+                    except Exception as e:
+                        reply = f"Sorry, I hit an error: {e}"
+                st.markdown(reply)
             st.session_state["chat_history"].append({"role": "assistant", "content": reply})
-            st.rerun()
 
         if st.session_state["chat_history"]:
-            if st.button("🗑 Clear conversation", use_container_width=False):
+            if st.button("🗑 Clear conversation"):
                 st.session_state["chat_history"] = []
                 if assistant:
                     assistant.reset_history()
                 st.rerun()
 
-    # ── Right panel: data context ──────────────────────────────────────────
+    # ── Right panel: dataset context ────────────────────────────────────────
     with col_ctx:
         st.markdown("""<div class="section-header">
             <div class="section-dot"></div>
             <div class="section-title">What the AI Sees</div>
         </div>""", unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div style="background:{C["surface"]};border:1px solid {C["border"]};
-                    border-radius:12px;padding:.8rem 1rem;margin-bottom:.8rem">
-            <div style="font-size:.7rem;color:{C["muted"]};margin-bottom:.5rem;
-                        text-transform:uppercase;letter-spacing:.08em;font-weight:600">
-                Dataset Summary Injected into System Prompt
-            </div>
-            <div style="font-size:.72rem;color:{C["slate"]};line-height:1.6;
-                        max-height:420px;overflow-y:auto;white-space:pre-wrap;
-                        font-family:monospace">
-{st.session_state["context"]}
-            </div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="background:{C["surface"]};border:1px solid {C["border"]};'
+            f'border-radius:12px;padding:.8rem 1rem">'
+            f'<div style="font-size:.7rem;color:{C["muted"]};margin-bottom:.5rem;'
+            f'text-transform:uppercase;letter-spacing:.08em;font-weight:600">'
+            f'Dataset Summary Injected into System Prompt</div>'
+            f'<div style="font-size:.72rem;color:{C["slate"]};line-height:1.6;'
+            f'max-height:480px;overflow-y:auto;white-space:pre-wrap;font-family:monospace">'
+            f'{st.session_state["context"]}</div></div>',
+            unsafe_allow_html=True,
+        )
+
