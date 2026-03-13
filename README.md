@@ -7,7 +7,7 @@ A full-stack, AI-powered sales analytics dashboard built with:
 | Frontend / Dashboard | Streamlit |
 | Data processing | pandas, NumPy |
 | Visualisations | Plotly |
-| AI assistant | OpenAI GPT-3.5-turbo (+ rule-based fallback) |
+| AI assistant | Google Gemini 2.5 Flash (free tier) + OpenAI fallback + rule-based |
 | Data ingestion | CSV upload, SQLAlchemy, REST CRM stub |
 
 ---
@@ -35,14 +35,24 @@ sales_analyzer/
 pip install -r requirements.txt
 ```
 
-### 2. (Optional) Configure AI
+### 2. Configure AI (Optional but Recommended)
+
+**Option 1: Google Gemini (FREE - Recommended)**
 
 ```bash
-cp .env.example .env
-# edit .env and add your OPENAI_API_KEY
+# Get free API key from https://makersuite.google.com/app/apikey
+echo "GEMINI_API_KEY=your-gemini-key-here" > .env
+
+# Free tier: 60 requests/minute, no credit card required!
 ```
 
-The app works without an API key using a built-in rule-based assistant.
+**Option 2: OpenAI (Paid)**
+
+```bash
+echo "OPENAI_API_KEY=sk-..." >> .env
+```
+
+The app works without any API key using a built-in rule-based assistant.
 
 ### 3. Generate sample data (optional)
 
@@ -136,13 +146,47 @@ Subclass `DataConnector` and implement `load()` for any other source.
 
 ---
 
-## Upgrading the AI model
+## AI Model Configuration
 
-In `ai_assistant.py`, change:
+The app automatically uses the first available AI provider:
 
-```python
-MODEL = "gpt-3.5-turbo"   # → "gpt-4o" for richer, more accurate answers
+1. **Google Gemini** (priority if `GEMINI_API_KEY` is set)
+   - Model: `gemini-2.5-flash`
+   - Free tier: 60 requests/minute
+
+2. **OpenAI** (fallback if `OPENAI_API_KEY` is set)
+   - Model: `gpt-3.5-turbo`
+   - Change to `gpt-4o` in `ai_assistant.py` for better answers
+
+3. **Rule-based** (works with no API keys)
+
+---
+
+## Deploy to Streamlit Cloud
+
+### Step 1: Prepare Repository
+Your code is already on GitHub: `https://github.com/HASADKHAN76/ai-sales-profit-analyzer`
+
+### Step 2: Deploy
+1. Go to [share.streamlit.io](https://share.streamlit.io)
+2. Sign in with GitHub
+3. Click "New app"
+4. Select:
+   - Repository: `HASADKHAN76/ai-sales-profit-analyzer`
+   - Branch: `main`
+   - Main file: `app.py`
+
+### Step 3: Add Secrets
+In the app settings, add your secrets:
+
+```toml
+GEMINI_API_KEY = "AIzaSy..."
 ```
+
+### Step 4: Deploy!
+Click "Deploy" and your app will be live in minutes!
+
+**Live URL:** `https://your-app-name.streamlit.app`
 
 ---
 
