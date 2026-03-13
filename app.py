@@ -54,16 +54,16 @@ PLOTLY_BASE = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor ="rgba(13,21,38,0.7)",
     font         =dict(color=C["text"], family="Inter, sans-serif", size=12),
-    legend       =dict(bgcolor="rgba(0,0,0,0)", bordercolor=C["border"],
-                       font=dict(color=C["text"])),
-    margin       =dict(l=0, r=0, t=36, b=0),
     hoverlabel   =dict(bgcolor=C["surface2"], bordercolor=C["border"],
                        font_color=C["text"]),
 )
 
-# Reusable axis-style base — spread with dict(**AX, title=...) inside update_layout
-AX = dict(gridcolor=C["border"], zeroline=False,
-          linecolor=C["border"], tickfont=dict(color=C["slate"]))
+# Reusable helpers — spread inside update_layout calls as needed
+AX     = dict(gridcolor=C["border"], zeroline=False,
+              linecolor=C["border"], tickfont=dict(color=C["slate"]))
+LEGEND = dict(bgcolor="rgba(0,0,0,0)", bordercolor=C["border"],
+              font=dict(color=C["text"]))
+MARGIN = dict(l=0, r=0, t=36, b=0)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Global CSS
@@ -666,6 +666,7 @@ with tab_dash:
         **PLOTLY_BASE,
         barmode="group", height=400,
         bargap=0.25, bargroupgap=0.08,
+        margin=MARGIN,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                     font=dict(size=11)),
         yaxis =dict(**AX, title="Amount ($)", tickprefix="$",
@@ -701,6 +702,7 @@ with tab_dash:
         ))
         fig_mom.update_layout(
             **PLOTLY_BASE, height=290,
+            margin=MARGIN,
             yaxis=dict(**AX, ticksuffix="%", title=""),
             xaxis=dict(**AX, title=""),
             showlegend=False,
@@ -732,6 +734,7 @@ with tab_dash:
         )
         fig_margin.update_layout(
             **PLOTLY_BASE, height=290,
+            margin=MARGIN,
             yaxis=dict(**AX, ticksuffix="%", title=""),
             xaxis=dict(**AX, title=""),
             showlegend=False,
@@ -806,6 +809,7 @@ with tab_prod:
         ))
         fig_prod.update_layout(
             **PLOTLY_BASE, height=420,
+            margin=MARGIN,
             xaxis=dict(**AX, tickprefix="$", title="Revenue"),
             yaxis=dict(**AX, title=""),
             showlegend=False,
@@ -828,6 +832,7 @@ with tab_prod:
         )
         fig_scatter.update_layout(
             **PLOTLY_BASE, height=420,
+            margin=MARGIN, legend=LEGEND,
             coloraxis_colorbar=dict(title="Profit $", tickprefix="$",
                                     tickfont=dict(color=C["slate"]),
                                     titlefont=dict(color=C["slate"])),
@@ -920,6 +925,7 @@ with tab_cust:
         ))
         fig_cust_bar.update_layout(
             **PLOTLY_BASE, height=400,
+            margin=MARGIN,
             xaxis=dict(**AX, tickprefix="$", title="Revenue"),
             yaxis=dict(**AX, title=""),
             showlegend=False,
@@ -941,6 +947,7 @@ with tab_cust:
         )
         fig_cust_scatter.update_layout(
             **PLOTLY_BASE, height=400,
+            margin=MARGIN, legend=LEGEND,
             xaxis=dict(**AX, title="Number of Orders"),
             yaxis=dict(**AX, tickprefix="$", title="Total Revenue ($)"),
             coloraxis_colorbar=dict(title="Profit $", tickprefix="$",
