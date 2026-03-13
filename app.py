@@ -405,6 +405,17 @@ with st.sidebar:
     st.caption("date · product · price · cost · quantity · customer")
 
     st.markdown('<div class="sb-section-label">Quick Demo</div>', unsafe_allow_html=True)
+    if st.button("📁  Load 25-row Sample Data", use_container_width=True):
+        try:
+            with open("small_sample.csv", "rb") as f:
+                buf = io.BytesIO(f.read())
+                buf.seek(0)
+                st.session_state["_demo_bytes"] = buf
+            st.session_state["_use_demo"] = True
+            st.rerun()
+        except FileNotFoundError:
+            st.error("small_sample.csv not found in app directory")
+
     if st.button("⚡  Load 2 000-row Demo Dataset", use_container_width=True):
         from sample_data_generator import generate_dataset
         with st.spinner("Generating realistic demo data…"):
