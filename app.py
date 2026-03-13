@@ -671,9 +671,10 @@ with tab_dash:
                     font=dict(size=11)),
         yaxis =dict(**AX, title="Amount ($)", tickprefix="$",
                     tickformat=",.0f"),
-        yaxis2=dict(title="Margin %", overlaying="y", side="right",
+        yaxis2=dict(title=dict(text="Margin %", font=dict(color=C["amber"])),
+                    overlaying="y", side="right",
                     showgrid=False, tickformat=".1f", ticksuffix="%",
-                    tickfont=dict(color=C["amber"]), titlefont=dict(color=C["amber"])),
+                    tickfont=dict(color=C["amber"])),
         xaxis =dict(**AX, title=""),
     )
     st.markdown('<div class="chart-panel">', unsafe_allow_html=True)
@@ -794,9 +795,9 @@ with tab_prod:
             marker=dict(
                 color=products.sort_values("total_revenue")["profit_margin_pct"],
                 colorscale=[[0, C["rose"]], [0.5, C["amber"]], [1, C["emerald"]]],
-                colorbar=dict(title="Margin %", ticksuffix="%",
-                              tickfont=dict(color=C["slate"]),
-                              titlefont=dict(color=C["slate"])),
+                colorbar=dict(title=dict(text="Margin %", font=dict(color=C["slate"])),
+                              ticksuffix="%",
+                              tickfont=dict(color=C["slate"])),
                 line=dict(width=0),
             ),
             hovertemplate=(
@@ -833,9 +834,9 @@ with tab_prod:
         fig_scatter.update_layout(
             **PLOTLY_BASE, height=420,
             margin=MARGIN, legend=LEGEND,
-            coloraxis_colorbar=dict(title="Profit $", tickprefix="$",
-                                    tickfont=dict(color=C["slate"]),
-                                    titlefont=dict(color=C["slate"])),
+            coloraxis_colorbar=dict(title=dict(text="Profit $", font=dict(color=C["slate"])),
+                                    tickprefix="$",
+                                    tickfont=dict(color=C["slate"])),
             xaxis=dict(**AX, tickprefix="$", title="Revenue ($)"),
             yaxis=dict(**AX, ticksuffix="%", title="Margin %"),
         )
@@ -950,9 +951,9 @@ with tab_cust:
             margin=MARGIN, legend=LEGEND,
             xaxis=dict(**AX, title="Number of Orders"),
             yaxis=dict(**AX, tickprefix="$", title="Total Revenue ($)"),
-            coloraxis_colorbar=dict(title="Profit $", tickprefix="$",
-                                    tickfont=dict(color=C["slate"]),
-                                    titlefont=dict(color=C["slate"])),
+            coloraxis_colorbar=dict(title=dict(text="Profit $", font=dict(color=C["slate"])),
+                                    tickprefix="$",
+                                    tickfont=dict(color=C["slate"])),
         )
         st.markdown('<div class="chart-panel">', unsafe_allow_html=True)
         st.plotly_chart(fig_cust_scatter, use_container_width=True)
