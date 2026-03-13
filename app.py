@@ -52,18 +52,18 @@ C = {
 
 PLOTLY_BASE = dict(
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor =f"rgba(13,21,38,0.7)",
+    plot_bgcolor ="rgba(13,21,38,0.7)",
     font         =dict(color=C["text"], family="Inter, sans-serif", size=12),
-    xaxis        =dict(gridcolor=C["border"], zeroline=False,
-                       linecolor=C["border"], tickfont=dict(color=C["slate"])),
-    yaxis        =dict(gridcolor=C["border"], zeroline=False,
-                       linecolor=C["border"], tickfont=dict(color=C["slate"])),
     legend       =dict(bgcolor="rgba(0,0,0,0)", bordercolor=C["border"],
                        font=dict(color=C["text"])),
     margin       =dict(l=0, r=0, t=36, b=0),
     hoverlabel   =dict(bgcolor=C["surface2"], bordercolor=C["border"],
                        font_color=C["text"]),
 )
+
+# Reusable axis-style base — spread with dict(**AX, title=...) inside update_layout
+AX = dict(gridcolor=C["border"], zeroline=False,
+          linecolor=C["border"], tickfont=dict(color=C["slate"]))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Global CSS
@@ -668,12 +668,12 @@ with tab_dash:
         bargap=0.25, bargroupgap=0.08,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                     font=dict(size=11)),
-        yaxis =dict(**PLOTLY_BASE["yaxis"], title="Amount ($)", tickprefix="$",
+        yaxis =dict(**AX, title="Amount ($)", tickprefix="$",
                     tickformat=",.0f"),
         yaxis2=dict(title="Margin %", overlaying="y", side="right",
                     showgrid=False, tickformat=".1f", ticksuffix="%",
                     tickfont=dict(color=C["amber"]), titlefont=dict(color=C["amber"])),
-        xaxis =dict(**PLOTLY_BASE["xaxis"], title=""),
+        xaxis =dict(**AX, title=""),
     )
     st.markdown('<div class="chart-panel">', unsafe_allow_html=True)
     st.plotly_chart(fig_trend, use_container_width=True)
@@ -701,8 +701,8 @@ with tab_dash:
         ))
         fig_mom.update_layout(
             **PLOTLY_BASE, height=290,
-            yaxis=dict(**PLOTLY_BASE["yaxis"], ticksuffix="%", title=""),
-            xaxis=dict(**PLOTLY_BASE["xaxis"], title=""),
+            yaxis=dict(**AX, ticksuffix="%", title=""),
+            xaxis=dict(**AX, title=""),
             showlegend=False,
         )
         st.markdown('<div class="chart-panel">', unsafe_allow_html=True)
@@ -732,8 +732,8 @@ with tab_dash:
         )
         fig_margin.update_layout(
             **PLOTLY_BASE, height=290,
-            yaxis=dict(**PLOTLY_BASE["yaxis"], ticksuffix="%", title=""),
-            xaxis=dict(**PLOTLY_BASE["xaxis"], title=""),
+            yaxis=dict(**AX, ticksuffix="%", title=""),
+            xaxis=dict(**AX, title=""),
             showlegend=False,
         )
         st.markdown('<div class="chart-panel">', unsafe_allow_html=True)
@@ -806,8 +806,8 @@ with tab_prod:
         ))
         fig_prod.update_layout(
             **PLOTLY_BASE, height=420,
-            xaxis=dict(**PLOTLY_BASE["xaxis"], tickprefix="$", title="Revenue"),
-            yaxis=dict(**PLOTLY_BASE["yaxis"], title=""),
+            xaxis=dict(**AX, tickprefix="$", title="Revenue"),
+            yaxis=dict(**AX, title=""),
             showlegend=False,
         )
         st.markdown('<div class="chart-panel">', unsafe_allow_html=True)
@@ -831,8 +831,8 @@ with tab_prod:
             coloraxis_colorbar=dict(title="Profit $", tickprefix="$",
                                     tickfont=dict(color=C["slate"]),
                                     titlefont=dict(color=C["slate"])),
-            xaxis=dict(**PLOTLY_BASE["xaxis"], tickprefix="$", title="Revenue ($)"),
-            yaxis=dict(**PLOTLY_BASE["yaxis"], ticksuffix="%", title="Margin %"),
+            xaxis=dict(**AX, tickprefix="$", title="Revenue ($)"),
+            yaxis=dict(**AX, ticksuffix="%", title="Margin %"),
         )
         st.markdown('<div class="chart-panel">', unsafe_allow_html=True)
         st.plotly_chart(fig_scatter, use_container_width=True)
@@ -920,8 +920,8 @@ with tab_cust:
         ))
         fig_cust_bar.update_layout(
             **PLOTLY_BASE, height=400,
-            xaxis=dict(**PLOTLY_BASE["xaxis"], tickprefix="$", title="Revenue"),
-            yaxis=dict(**PLOTLY_BASE["yaxis"], title=""),
+            xaxis=dict(**AX, tickprefix="$", title="Revenue"),
+            yaxis=dict(**AX, title=""),
             showlegend=False,
         )
         st.markdown('<div class="chart-panel">', unsafe_allow_html=True)
@@ -941,8 +941,8 @@ with tab_cust:
         )
         fig_cust_scatter.update_layout(
             **PLOTLY_BASE, height=400,
-            xaxis=dict(**PLOTLY_BASE["xaxis"], title="Number of Orders"),
-            yaxis=dict(**PLOTLY_BASE["yaxis"], tickprefix="$", title="Total Revenue ($)"),
+            xaxis=dict(**AX, title="Number of Orders"),
+            yaxis=dict(**AX, tickprefix="$", title="Total Revenue ($)"),
             coloraxis_colorbar=dict(title="Profit $", tickprefix="$",
                                     tickfont=dict(color=C["slate"]),
                                     titlefont=dict(color=C["slate"])),
