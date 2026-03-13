@@ -486,6 +486,13 @@ if uploaded:
 elif st.session_state.get("_use_demo") and st.session_state.get("_demo_bytes"):
     source = st.session_state["_demo_bytes"]
     st.session_state["_use_demo"] = False
+elif st.session_state["df"] is None:
+    # Auto-load sample data on first run if no data exists
+    try:
+        with open("small_sample.csv", "rb") as f:
+            source = io.BytesIO(f.read())
+    except FileNotFoundError:
+        pass  # No sample file available, show welcome screen
 
 if source is not None:
     try:
