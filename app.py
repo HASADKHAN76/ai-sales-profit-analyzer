@@ -428,6 +428,18 @@ with st.sidebar:
         st.rerun()
 
     st.markdown('<div class="sb-section-label">AI Settings</div>', unsafe_allow_html=True)
+
+    # Gemini API Key (priority)
+    gemini_key_input = st.text_input(
+        "Google Gemini API Key (Free)", value=os.getenv("GEMINI_API_KEY", ""),
+        type="password", placeholder="AIza…  (recommended)",
+        label_visibility="collapsed",
+        help="Free tier: 60 requests/min. Get your key at https://makersuite.google.com/app/apikey",
+    )
+    if gemini_key_input:
+        os.environ["GEMINI_API_KEY"] = gemini_key_input
+
+    # OpenAI API Key (fallback)
     openai_key_input = st.text_input(
         "OpenAI API Key", value=os.getenv("OPENAI_API_KEY", ""),
         type="password", placeholder="sk-…  (optional)",
@@ -437,8 +449,17 @@ with st.sidebar:
     if openai_key_input:
         os.environ["OPENAI_API_KEY"] = openai_key_input
 
-    api_active = bool(os.getenv("OPENAI_API_KEY", "").strip())
-    if api_active:
+    # API Status Display
+    gemini_active = bool(os.getenv("GEMINI_API_KEY", "").strip())
+    openai_active = bool(os.getenv("OPENAI_API_KEY", "").strip())
+
+    if gemini_active:
+        st.markdown(
+            f'<span class="status-dot dot-green"></span>'
+            f'<span style="font-size:.75rem;color:#10b981">Gemini AI connected</span>',
+            unsafe_allow_html=True,
+        )
+    elif openai_active:
         st.markdown(
             f'<span class="status-dot dot-green"></span>'
             f'<span style="font-size:.75rem;color:#10b981">GPT connected</span>',
@@ -1061,13 +1082,18 @@ with tab_chat:
 
     with col_chat:
         # ── Status banner ───────────────────────────────────────────────────
+        gemini_active = bool(os.getenv("GEMINI_API_KEY", "").strip())
+        openai_active = bool(os.getenv("OPENAI_API_KEY", "").strip())
+        api_active = gemini_active or openai_active
+
         if api_active:
+            ai_name = "Gemini AI" if gemini_active else "GPT"
             st.markdown(f"""
             <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);
                         border-radius:10px;padding:.55rem 1rem;margin-bottom:.8rem;
                         display:flex;align-items:center;gap:.5rem">
                 <span class="status-dot dot-green"></span>
-                <span style="font-size:.78rem;color:{C["emerald"]};font-weight:600">GPT Connected</span>
+                <span style="font-size:.78rem;color:{C["emerald"]};font-weight:600">{ai_name} Connected</span>
                 <span style="font-size:.72rem;color:{C["muted"]};margin-left:.3rem">Full conversational AI enabled</span>
             </div>""", unsafe_allow_html=True)
         else:
@@ -1077,7 +1103,7 @@ with tab_chat:
                         display:flex;align-items:center;gap:.5rem">
                 <span class="status-dot dot-amber"></span>
                 <span style="font-size:.78rem;color:{C["amber"]};font-weight:600">Rule-based Mode</span>
-                <span style="font-size:.72rem;color:{C["muted"]};margin-left:.3rem">Add OpenAI key in sidebar for GPT answers</span>
+                <span style="font-size:.72rem;color:{C["muted"]};margin-left:.3rem">Add API key in sidebar for AI answers</span>
             </div>""", unsafe_allow_html=True)
 
         # ── Suggestion buttons ──────────────────────────────────────────────

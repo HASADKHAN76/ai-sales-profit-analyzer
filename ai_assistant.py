@@ -3,7 +3,8 @@ ai_assistant.py
 AI chatbot that answers business questions about the uploaded sales dataset.
 
 Supports:
-  - OpenAI  (default, requires OPENAI_API_KEY)
+  - Google Gemini  (free tier, requires GEMINI_API_KEY)
+  - OpenAI  (requires OPENAI_API_KEY)
   - Fallback rule-based engine (works with no API key — useful for demos)
 """
 
@@ -38,38 +39,125 @@ def _build_openai_client():
 
 
 # ─────────────────────────────────────────────
+# Google Gemini client
+# ─────────────────────────────────────────────
+def _build_gemini_client():
+    try:
+        from google import genai  # type: ignore
+        api_key = os.getenv("GEMINI_API_KEY", "")
+        if not api_key:
+            return None
+        client = genai.Client(api_key=api_key)
+        return client
+    except ImportError:
+        return None
+
+
+# ─────────────────────────────────────────────
 # Main assistant class
 # ─────────────────────────────────────────────
 class SalesAIAssistant:
     """
-    Wraps OpenAI chat completions with a dataset context injected into the
-    system prompt.  Falls back to a rule-based responder when no API key
+    Wraps AI chat completions (Gemini or OpenAI) with a dataset context injected
+    into the system prompt. Falls back to a rule-based responder when no API key
     is configured, so the app is always demo-able.
     """
 
-    MODEL = "gpt-3.5-turbo"   # swap to "gpt-4o" for richer answers
+    OPENAI_MODEL = "gpt-3.5-turbo"
+    GEMINI_MODEL = "gemini-2.5-flash"
 
     def __init__(self, context_summary: str):
-        self.context   = context_summary
-        self.client    = _build_openai_client()
+        self.context        = context_summary
+        self.gemini_client  = _build_gemini_client()
+        self.openai_client  = _build_openai_client()
         self.history: list[dict] = []          # rolling conversation history
+        self.provider       = None
+
+        if self.gemini_client:
+            self.provider = "gemini"
+        elif self.openai_client:
+            self.provider = "openai"
 
     # ── public API ─────────────────────────────
     def chat(self, user_message: str) -> str:
         """Return the full assistant reply as a string."""
-        if self.client:
+        if self.provider == "gemini":
+            return self._gemini_chat(user_message)
+        elif self.provider == "openai":
             return self._openai_chat(user_message)
         return self._rule_based_chat(user_message)
 
     def stream(self, user_message: str) -> Generator[str, None, None]:
         """Yield reply tokens one by one (streaming).  Falls back to single chunk."""
-        if self.client:
+        if self.provider == "gemini":
+            yield from self._gemini_stream(user_message)
+        elif self.provider == "openai":
             yield from self._openai_stream(user_message)
         else:
             yield self._rule_based_chat(user_message)
 
     def reset_history(self):
         self.history = []
+
+    # ── Google Gemini path ─────────────────────
+    def _gemini_chat(self, user_message: str) -> str:
+        self.history.append({"role": "user", "content": user_message})
+
+        # Build full prompt with context
+        system_context = SYSTEM_PROMPT_TEMPLATE.format(context=self.context)
+
+        # Convert history to Gemini format
+        prompt_parts = [system_context, "\n\n"]
+        for msg in self.history[-20:]:  # keep last 20 turns
+            role = "User" if msg["role"] == "user" else "Assistant"
+            prompt_parts.append(f"{role}: {msg['content']}\n")
+        prompt_parts.append("Assistant: ")
+
+        full_prompt = "".join(prompt_parts)
+
+        response = self.gemini_client.models.generate_content(
+            model=self.GEMINI_MODEL,
+            contents=full_prompt,
+            config={
+                'temperature': 0.3,
+                'max_output_tokens': 800,
+            }
+        )
+        reply = response.text.strip()
+        self.history.append({"role": "assistant", "content": reply})
+        return reply
+
+    def _gemini_stream(self, user_message: str) -> Generator[str, None, None]:
+        self.history.append({"role": "user", "content": user_message})
+
+        # Build full prompt with context
+        system_context = SYSTEM_PROMPT_TEMPLATE.format(context=self.context)
+
+        # Convert history to Gemini format
+        prompt_parts = [system_context, "\n\n"]
+        for msg in self.history[-20:]:
+            role = "User" if msg["role"] == "user" else "Assistant"
+            prompt_parts.append(f"{role}: {msg['content']}\n")
+        prompt_parts.append("Assistant: ")
+
+        full_prompt = "".join(prompt_parts)
+
+        response = self.gemini_client.models.generate_content_stream(
+            model=self.GEMINI_MODEL,
+            contents=full_prompt,
+            config={
+                'temperature': 0.3,
+                'max_output_tokens': 800,
+            }
+        )
+
+        collected = []
+        for chunk in response:
+            if chunk.text:
+                collected.append(chunk.text)
+                yield chunk.text
+
+        self.history.append({"role": "assistant", "content": "".join(collected)})
 
     # ── OpenAI path ────────────────────────────
     def _system_message(self) -> dict:
@@ -82,8 +170,8 @@ class SalesAIAssistant:
         self.history.append({"role": "user", "content": user_message})
         messages = [self._system_message()] + self.history[-20:]   # keep last 20 turns
 
-        response = self.client.chat.completions.create(
-            model=self.MODEL,
+        response = self.openai_client.chat.completions.create(
+            model=self.OPENAI_MODEL,
             messages=messages,
             temperature=0.3,
             max_tokens=800,
@@ -96,8 +184,8 @@ class SalesAIAssistant:
         self.history.append({"role": "user", "content": user_message})
         messages = [self._system_message()] + self.history[-20:]
 
-        stream = self.client.chat.completions.create(
-            model=self.MODEL,
+        stream = self.openai_client.chat.completions.create(
+            model=self.OPENAI_MODEL,
             messages=messages,
             temperature=0.3,
             max_tokens=800,
