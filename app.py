@@ -314,6 +314,7 @@ def _init_state():
         "user": None,
         "selected_business_id": None,
         "ai_assistant": None,
+        "ai_assistant_signature": None,
         "chat_history": [],
     }
     for key, val in defaults.items():
@@ -322,6 +323,18 @@ def _init_state():
 
 _init_state()
 db.init_db()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Early helpers needed during top-level sidebar rendering
+# ─────────────────────────────────────────────────────────────────────────────
+def _sync_runtime_setting(key: str, value: str) -> None:
+    """Keep runtime environment settings in sync with sidebar inputs."""
+    cleaned = value.strip()
+    if cleaned:
+        os.environ[key] = cleaned
+    else:
+        os.environ.pop(key, None)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -374,28 +387,26 @@ with st.sidebar:
     st.markdown('<div class="sb-section-label">AI Settings</div>', unsafe_allow_html=True)
     gemini_key_input = st.text_input(
         "Gemini API Key",
-        value=os.getenv("GEMINI_API_KEY", ""),
+        value=get_setting("GEMINI_API_KEY", ""),
         type="password",
         placeholder="AIza…  (recommended)",
         label_visibility="collapsed",
         help="Free tier: 60 req/min. Get key at makersuite.google.com",
     )
-    if gemini_key_input:
-        os.environ["GEMINI_API_KEY"] = gemini_key_input
+    _sync_runtime_setting("GEMINI_API_KEY", gemini_key_input)
 
     openai_key_input = st.text_input(
         "OpenAI API Key",
-        value=os.getenv("OPENAI_API_KEY", ""),
+        value=get_setting("OPENAI_API_KEY", ""),
         type="password",
         placeholder="sk-…  (optional)",
         label_visibility="collapsed",
         help="GPT-3.5/4o for richer AI answers. Leave blank for rule-based mode.",
     )
-    if openai_key_input:
-        os.environ["OPENAI_API_KEY"] = openai_key_input
+    _sync_runtime_setting("OPENAI_API_KEY", openai_key_input)
 
-    gemini_active = bool(os.getenv("GEMINI_API_KEY", "").strip())
-    openai_active = bool(os.getenv("OPENAI_API_KEY", "").strip())
+    gemini_active = bool(get_setting("GEMINI_API_KEY", "").strip())
+    openai_active = bool(get_setting("OPENAI_API_KEY", "").strip())
     if gemini_active:
         st.markdown(
             f'<span class="status-dot dot-green"></span>'
@@ -451,6 +462,41 @@ def _render_topbar(title: str, subtitle: str) -> None:
             <span class="topbar-badge">{user_role.title()}</span>
         </div>
     </div>""", unsafe_allow_html=True)
+
+
+def _build_ai_context(business_id: int) -> str:
+    business_info = bm.get_current_business_info() or {}
+    summary = db.get_business_revenue_summary(business_id)
+    top_items = db.get_top_products_services(business_id, limit=5)
+
+    context_parts = [
+        f"Business: {business_info.get('name', '')} ({business_info.get('business_type', '')})",
+        f"Total Revenue: ${summary['total_revenue']:,.2f}",
+        f"Total Profit: ${summary['total_profit']:,.2f}",
+        f"Profit Margin: {summary['profit_margin']:.1f}%",
+        f"Total Transactions: {summary['total_transactions']:,}",
+    ]
+    for item in top_items[:3]:
+        context_parts.append(f"Top Item: {item['name']} (${item['total_revenue']:,.0f})")
+
+    return "\n".join(context_parts)
+
+
+def _get_ai_assistant(business_id: int) -> SalesAIAssistant:
+    context_summary = _build_ai_context(business_id)
+    signature = (
+        business_id,
+        context_summary,
+        get_setting("GEMINI_API_KEY", ""),
+        get_setting("OPENAI_API_KEY", ""),
+    )
+
+    if st.session_state.get("ai_assistant_signature") != signature:
+        st.session_state["ai_assistant"] = SalesAIAssistant(context_summary)
+        st.session_state["ai_assistant_signature"] = signature
+        st.session_state["chat_history"] = []
+
+    return st.session_state["ai_assistant"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -605,23 +651,7 @@ def _render_ai_insights(business_id: int) -> None:
         <div class="section-dot"></div>
         <div class="section-title">AI Insights</div>
     </div>""", unsafe_allow_html=True)
-
-    business_info = bm.get_current_business_info() or {}
-    summary = db.get_business_revenue_summary(business_id)
-    top_items = db.get_top_products_services(business_id, limit=5)
-
-    context_parts = [
-        f"Business: {business_info.get('name', '')} ({business_info.get('business_type', '')})",
-        f"Total Revenue: ${summary['total_revenue']:,.2f}",
-        f"Total Profit: ${summary['total_profit']:,.2f}",
-        f"Profit Margin: {summary['profit_margin']:.1f}%",
-        f"Total Transactions: {summary['total_transactions']:,}",
-    ]
-    for item in top_items[:3]:
-        context_parts.append(f"Top Item: {item['name']} (${item['total_revenue']:,.0f})")
-
-    if st.session_state.get("ai_assistant") is None:
-        st.session_state["ai_assistant"] = SalesAIAssistant("\n".join(context_parts))
+    assistant = _get_ai_assistant(business_id)
 
     gemini_active = bool(get_setting("GEMINI_API_KEY", "").strip())
     openai_active = bool(get_setting("OPENAI_API_KEY", "").strip())
@@ -653,7 +683,7 @@ def _render_ai_insights(business_id: int) -> None:
         if cols[idx].button(question, key=f"quick_ai_{idx}", use_container_width=True):
             st.session_state["chat_history"].append({"role": "user", "content": question})
             try:
-                answer = st.session_state["ai_assistant"].chat(question)
+                answer = assistant.chat(question)
             except Exception as exc:
                 log_exception("ai.quick_question", exc)
                 answer = "I could not generate insights right now. Please try again shortly."
@@ -670,7 +700,7 @@ def _render_ai_insights(business_id: int) -> None:
         with st.chat_message("assistant"):
             with st.spinner("Analyzing..."):
                 try:
-                    answer = st.session_state["ai_assistant"].chat(prompt)
+                    answer = assistant.chat(prompt)
                 except Exception as exc:
                     log_exception("ai.chat", exc)
                     answer = "I could not generate insights right now. Please try again shortly."
