@@ -1,11 +1,11 @@
 """
 ai_assistant.py
-AI chatbot that answers business questions about the uploaded sales dataset.
+AI chatbot that answers business questions about retail & e-commerce sales data.
 
 Supports:
   - Google Gemini  (free tier, requires GEMINI_API_KEY)
   - OpenAI  (requires OPENAI_API_KEY)
-  - Fallback rule-based engine (works with no API key — useful for demos)
+  - Fallback rule-based engine (works with no API key)
 """
 
 from __future__ import annotations
@@ -14,11 +14,21 @@ import os
 import re
 from typing import Generator, Optional
 
-SYSTEM_PROMPT_TEMPLATE = """You are an expert Sales & Profit Analyst AI assistant.
-You have been given a summary of a company's sales dataset below.
-Answer the user's questions using ONLY the data provided.
-Be concise, specific, and always back your answers with numbers from the data.
-When relevant, suggest actionable business recommendations.
+SYSTEM_PROMPT_TEMPLATE = """You are RetailBrain AI — an expert Business Analytics & Management Assistant.
+You specialize in retail, gym, coaching, and service business analytics.
+You have been given a summary of the business data below.
+
+Answer questions using ONLY the data provided. Be specific, actionable, and business-focused.
+Provide practical recommendations tailored to the business type and current performance.
+
+Key areas you can help with:
+- Revenue and profit analysis
+- Product/service performance optimization
+- Inventory management advice
+- Customer insights and retention
+- Pricing strategies
+- Business growth recommendations
+- Operational efficiency tips
 
 {context}
 """
@@ -60,7 +70,7 @@ class SalesAIAssistant:
     """
     Wraps AI chat completions (Gemini or OpenAI) with a dataset context injected
     into the system prompt. Falls back to a rule-based responder when no API key
-    is configured, so the app is always demo-able.
+    is configured.
     """
 
     OPENAI_MODEL = "gpt-3.5-turbo"
@@ -202,96 +212,196 @@ class SalesAIAssistant:
     # ── Rule-based fallback ─────────────────────
     def _rule_based_chat(self, user_message: str) -> str:
         """
-        Keyword-driven responder — works without any API key.
-        Parses the context summary string to extract answers.
+        Enhanced business-focused keyword-driven responder.
+        Provides helpful insights without requiring API keys.
         """
         q = user_message.lower()
 
-        # ── best / worst month ──────────────────
+        # ── business insights ───────────────────────
+        if any(w in q for w in ("insight", "recommendation", "advice", "improve", "grow", "help")):
+            # Extract basic metrics from context
+            revenue_match = re.search(r"Total Revenue:\s*\$?([0-9,]+\.?\d*)", self.context)
+            profit_match = re.search(r"Total Profit:\s*\$?([0-9,]+\.?\d*)", self.context)
+            margin_match = re.search(r"Profit Margin:\s*([0-9.]+)%", self.context)
+
+            insights = ["**Business Insights & Recommendations:**\n"]
+
+            if margin_match:
+                margin = float(margin_match.group(1))
+                if margin < 10:
+                    insights.append("🔍 **Low Profit Margin Alert** - Consider reviewing your pricing strategy or reducing costs")
+                elif margin > 25:
+                    insights.append("💚 **Healthy Profit Margins** - Great job! Focus on scaling successful products")
+                else:
+                    insights.append("📊 **Moderate Profit Margins** - Look for opportunities to optimize pricing")
+
+            insights.extend([
+                "📈 **Growth Strategies:**",
+                "- Track your top-performing products and promote them more",
+                "- Monitor inventory levels to avoid stockouts",
+                "- Analyze customer buying patterns for upselling opportunities",
+                "- Consider seasonal promotions during slow periods",
+                "",
+                "🎯 **Operational Tips:**",
+                "- Set up low-stock alerts for key products",
+                "- Review and optimize your pricing regularly",
+                "- Focus on high-margin products",
+                "- Track daily/weekly sales patterns"
+            ])
+
+            return "\n".join(insights)
+
+        # ── inventory management ────────────────────
+        if any(w in q for w in ("inventory", "stock", "reorder", "out of stock", "low stock")):
+            return (
+                "📦 **Inventory Management Tips:**\n\n"
+                "**Stock Optimization:**\n"
+                "- Set minimum stock levels for each product\n"
+                "- Monitor your top-selling items closely\n"
+                "- Track seasonal demand patterns\n"
+                "- Consider ABC analysis (A=high value, C=low value)\n\n"
+                "**Reorder Strategy:**\n"
+                "- Calculate lead times for suppliers\n"
+                "- Set up automated low-stock alerts\n"
+                "- Review stock levels weekly\n"
+                "- Focus on fast-moving inventory\n\n"
+                "_Use the Inventory tab to monitor stock levels and set alerts._"
+            )
+
+        # ── pricing strategy ────────────────────────
+        if any(w in q for w in ("pricing", "price", "margin", "profit margin", "cost")):
+            margin_match = re.search(r"Profit Margin:\s*([0-9.]+)%", self.context)
+
+            response = "💰 **Pricing Strategy Guide:**\n\n"
+
+            if margin_match:
+                margin = float(margin_match.group(1))
+                response += f"**Current Margin: {margin:.1f}%**\n\n"
+
+                if margin < 15:
+                    response += "🚨 **Action Needed:** Your margins are below industry average\n"
+                elif margin > 30:
+                    response += "🎯 **Excellent Margins:** You're pricing effectively\n"
+                else:
+                    response += "📊 **Good Margins:** Consider optimization opportunities\n"
+
+            response += (
+                "\n**Pricing Best Practices:**\n"
+                "- Research competitor pricing regularly\n"
+                "- Test price increases on low-elasticity items\n"
+                "- Bundle complementary products\n"
+                "- Consider value-based pricing for services\n"
+                "- Monitor customer price sensitivity\n\n"
+                "**Margin Improvement:**\n"
+                "- Negotiate better supplier terms\n"
+                "- Focus on high-margin products\n"
+                "- Reduce operational costs\n"
+                "- Add premium service options"
+            )
+
+            return response
+
+        # ── customer retention ──────────────────────
+        if any(w in q for w in ("customer", "retention", "loyalty", "repeat", "churn")):
+            return (
+                "👥 **Customer Retention Strategies:**\n\n"
+                "**Build Loyalty:**\n"
+                "- Implement a rewards program\n"
+                "- Send personalized follow-up messages\n"
+                "- Track customer purchase frequency\n"
+                "- Offer exclusive member discounts\n\n"
+                "**Improve Experience:**\n"
+                "- Collect and act on customer feedback\n"
+                "- Ensure consistent service quality\n"
+                "- Reduce wait times and friction\n"
+                "- Train staff on customer service\n\n"
+                "**Re-engagement:**\n"
+                "- Identify customers who haven't purchased recently\n"
+                "- Send targeted offers to win them back\n"
+                "- Create seasonal promotions\n"
+                "- Use email marketing for updates"
+            )
+
+        # ── sales performance ───────────────────────
+        if any(w in q for w in ("sales", "performance", "revenue", "growth", "increase")):
+            revenue_match = re.search(r"Total Revenue:\s*\$?([0-9,]+\.?\d*)", self.context)
+
+            response = "📈 **Sales Performance Analysis:**\n\n"
+
+            if revenue_match:
+                revenue = revenue_match.group(1)
+                response += f"**Current Revenue: ${revenue}**\n\n"
+
+            response += (
+                "**Sales Growth Tactics:**\n"
+                "- Analyze your best-selling products and push them more\n"
+                "- Cross-sell related items to existing customers\n"
+                "- Create urgency with limited-time offers\n"
+                "- Optimize your product placement and displays\n\n"
+                "**Performance Tracking:**\n"
+                "- Monitor daily/weekly sales trends\n"
+                "- Track average transaction value\n"
+                "- Identify peak sales periods\n"
+                "- Set monthly revenue targets\n\n"
+                "**Revenue Optimization:**\n"
+                "- Focus marketing on high-value customers\n"
+                "- Increase order frequency vs. order size\n"
+                "- Test different pricing strategies\n"
+                "- Expand successful product lines"
+            )
+
+            return response
+
+        # ── Original basic responses ────────────────
         if any(w in q for w in ("highest profit", "best profit", "most profit")):
-            m = re.search(r"Best profit month\s*:\s*(.+)", self.context)
-            return (
-                f"The month with the **highest profit** was **{m.group(1).strip()}**."
-                if m else "Could not determine the best profit month from the data."
-            )
+            if "Top Products:" in self.context:
+                products_section = self.context.split("Top Products:")[1].split("\n")[1:4]
+                if products_section:
+                    return f"Based on your sales data, your **top profit-generating products** are:\n" + "\n".join(f"- {p.strip()}" for p in products_section if p.strip())
+            return "To see your most profitable products, check the Analytics tab for detailed insights."
 
-        if any(w in q for w in ("highest revenue", "best revenue", "most revenue", "best month")):
-            m = re.search(r"Best revenue month\s*:\s*(.+)", self.context)
-            return (
-                f"The month with the **highest revenue** was **{m.group(1).strip()}**."
-                if m else "Could not determine the best revenue month from the data."
-            )
+        if any(w in q for w in ("top product", "best product", "most sold", "highest selling")):
+            if "Top Products:" in self.context:
+                products_section = self.context.split("Top Products:")[1].split("\n")[1]
+                if products_section:
+                    return f"Your **top-performing product** is: {products_section.strip()}"
+            return "Check your Products & Services tab or Analytics section to see your best sellers."
 
-        if any(w in q for w in ("lowest", "worst month", "least revenue")):
-            m = re.search(r"Lowest revenue month\s*:\s*(.+)", self.context)
-            return (
-                f"The month with the **lowest revenue** was **{m.group(1).strip()}**."
-                if m else "Could not determine the worst revenue month from the data."
-            )
-
-        # ── top product ─────────────────────────
-        if any(w in q for w in ("top product", "best product", "most sold", "highest selling", "sells the most")):
-            m = re.search(r"Top 5 Products.*?\n\s+(\S[^\n:]+):", self.context)
-            if not m:
-                m = re.search(r"---\n\s+(.+?):", self.context)
-            return (
-                f"The top-selling product by revenue is **{m.group(1).strip()}**."
-                if m else "Could not identify the top product from the data."
-            )
-
-        # ── top customer ────────────────────────
-        if any(w in q for w in ("top customer", "best customer", "biggest customer")):
-            m = re.search(r"Top 5 Customers.*?\n\s+(\S[^\n:]+):", self.context)
-            return (
-                f"The top customer by revenue is **{m.group(1).strip()}**."
-                if m else "Could not identify the top customer from the data."
-            )
-
-        # ── total revenue / profit ───────────────
         if re.search(r"total revenue", q):
-            m = re.search(r"Total revenue\s*:\s*(\S+)", self.context)
-            return f"Total revenue across the entire dataset is **{m.group(1)}**." if m else "N/A"
+            revenue_match = re.search(r"Total Revenue:\s*(\$?[0-9,]+\.?\d*)", self.context)
+            if revenue_match:
+                return f"Your **total revenue** is **{revenue_match.group(1)}**."
+            return "You can view your total revenue in the Dashboard or Analytics section."
 
         if re.search(r"total profit", q):
-            m = re.search(r"Total profit\s*:\s*(\S+)", self.context)
-            return f"Total profit across the entire dataset is **{m.group(1)}**." if m else "N/A"
+            profit_match = re.search(r"Total Profit:\s*(\$?[0-9,]+\.?\d*)", self.context)
+            if profit_match:
+                return f"Your **total profit** is **{profit_match.group(1)}**."
+            return "Check the Dashboard for your current profit figures."
 
         if re.search(r"profit margin", q):
-            m = re.search(r"Profit margin\s*:\s*(\S+)", self.context)
-            return f"The overall profit margin is **{m.group(1)}**." if m else "N/A"
+            margin_match = re.search(r"Profit Margin:\s*([0-9.]+)%", self.context)
+            if margin_match:
+                margin = float(margin_match.group(1))
+                assessment = "excellent" if margin > 25 else "good" if margin > 15 else "needs improvement"
+                return f"Your **profit margin is {margin:.1f}%** - this is {assessment} for most businesses."
+            return "You can find your profit margin analysis in the Dashboard section."
 
-        # ── monthly breakdown ───────────────────
-        if any(w in q for w in ("monthly", "each month", "by month", "month by month", "trend")):
-            months_block = re.search(
-                r"--- Monthly Snapshot ---(.*?)---", self.context, re.DOTALL
-            )
-            if months_block:
-                return (
-                    "**Monthly breakdown:**\n```\n"
-                    + months_block.group(1).strip()
-                    + "\n```"
-                )
-
-        # ── revenue change between months ───────
-        if any(w in q for w in ("revenue change", "why did revenue", "revenue drop", "revenue increase")):
-            months_block = re.search(
-                r"--- Monthly Snapshot ---(.*?)---", self.context, re.DOTALL
-            )
-            if months_block:
-                return (
-                    "Here is the month-over-month revenue data. "
-                    "Differences in revenue between months can stem from seasonality, "
-                    "promotional campaigns, or shifts in product mix:\n"
-                    "```\n" + months_block.group(1).strip() + "\n```\n\n"
-                    "_Note: For deeper causal analysis, upload an OpenAI API key._"
-                )
-
-        # ── generic fallback ────────────────────
+        # ── Enhanced generic help ───────────────────
         return (
-            "I can answer questions about:\n"
-            "- Best/worst revenue or profit **months**\n"
-            "- **Top products** and **top customers**\n"
-            "- **Total revenue**, profit, and margin\n"
-            "- **Monthly trends** and revenue changes\n\n"
-            "For free-form analysis, add your `OPENAI_API_KEY` to `.env`."
+            "🤖 **I'm your RetailBrain AI assistant!** I can help with:\n\n"
+            "**Business Analytics:**\n"
+            "- Revenue and profit analysis\n"
+            "- Product performance insights\n"
+            "- Sales trends and patterns\n\n"
+            "**Business Growth:**\n"
+            "- Pricing strategy advice\n"
+            "- Inventory optimization tips\n"
+            "- Customer retention strategies\n\n"
+            "**Quick Questions to Try:**\n"
+            "- \"How can I improve my business?\"\n"
+            "- \"What's my profit margin?\"\n"
+            "- \"Give me inventory management tips\"\n"
+            "- \"How can I increase sales?\"\n\n"
+            "_For advanced AI analysis, add your API key in the sidebar._"
         )

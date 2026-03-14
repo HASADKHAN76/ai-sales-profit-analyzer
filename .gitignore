@@ -11,3 +11,5 @@ dist/
 build/
 .streamlit/secrets.toml
 streamlit.log
+*.log
+*.db

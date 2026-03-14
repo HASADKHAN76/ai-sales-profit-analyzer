@@ -1,6 +1,6 @@
-# AI Sales & Profit Analyzer
+# RetailBrain AI — Retail & E-commerce Analytics Platform
 
-A full-stack, AI-powered sales analytics dashboard built with:
+An AI-powered sales analytics dashboard for retail and e-commerce businesses, built with:
 
 | Layer | Technology |
 |---|---|
@@ -8,22 +8,8 @@ A full-stack, AI-powered sales analytics dashboard built with:
 | Data processing | pandas, NumPy |
 | Visualisations | Plotly |
 | AI assistant | Google Gemini 2.5 Flash (free tier) + OpenAI fallback + rule-based |
-| Data ingestion | CSV upload, SQLAlchemy, REST CRM stub |
-
----
-
-## Project Structure
-
-```
-sales_analyzer/
-├── app.py                   # Streamlit dashboard (entry point)
-├── data_processor.py        # All pandas analytics & KPI calculations
-├── ai_assistant.py          # OpenAI chatbot + rule-based fallback
-├── data_connector.py        # CSV / SQL / CRM data abstraction layer
-├── sample_data_generator.py # Generates a realistic demo CSV
-├── requirements.txt
-└── .env.example             # Environment variables template
-```
+| Authentication | bcrypt + JWT + 2FA |
+| Data ingestion | CSV upload, SQLAlchemy, REST CRM connector |
 
 ---
 
@@ -42,8 +28,6 @@ pip install -r requirements.txt
 ```bash
 # Get free API key from https://makersuite.google.com/app/apikey
 echo "GEMINI_API_KEY=your-gemini-key-here" > .env
-
-# Free tier: 60 requests/minute, no credit card required!
 ```
 
 **Option 2: OpenAI (Paid)**
@@ -54,14 +38,7 @@ echo "OPENAI_API_KEY=sk-..." >> .env
 
 The app works without any API key using a built-in rule-based assistant.
 
-### 3. Generate sample data (optional)
-
-```bash
-python sample_data_generator.py             # → sample_sales.csv  (2 000 rows)
-python sample_data_generator.py --rows 5000 # larger dataset
-```
-
-### 4. Run the app
+### 3. Run the app
 
 ```bash
 streamlit run app.py
@@ -88,34 +65,40 @@ The uploaded CSV must contain these columns (names are case-insensitive):
 
 ## Features
 
-### Dashboard tab
+### Overview Dashboard
 - KPI cards: total revenue, profit, margin %, order count, average order value
 - Grouped bar chart: monthly revenue vs profit with margin % overlay
 - Month-over-month revenue change (positive = green, negative = red)
 - Profit margin area chart by month
 
-### Products tab
+### Products Tab
 - Horizontal bar chart coloured by margin %
 - Searchable data table with revenue, profit, units sold
-- Units sold pie / donut chart
+- Units sold donut chart
 
-### Customers tab
+### Customers Tab
 - Top customers ranked by revenue
-- Order count heatmap colour scale
+- Customer scatter analysis (orders vs revenue)
 
-### Raw Data tab
+### Raw Data Tab
 - Preview processed dataset (first 500 rows)
 - Download processed CSV
 
-### AI Assistant tab
-- Six suggested question buttons (one-click)
+### AI Assistant Tab
+- Quick question buttons (one-click)
 - Free-text chat input
 - Scrollable conversation history
-- Expandable "dataset context" panel showing what the AI sees
+- Dataset context panel showing what the AI sees
+
+### User Management
+- Secure login with bcrypt password hashing
+- JWT session tokens
+- Two-factor authentication (2FA) support
+- Admin panel for user management
 
 ---
 
-## Extending Data Sources
+## Data Sources
 
 ### SQL database
 
@@ -129,7 +112,7 @@ conn = SQLConnector(
 df = conn.load()
 ```
 
-### CRM REST API (Salesforce / HubSpot)
+### CRM REST API
 
 ```python
 from data_connector import CRMConnector
@@ -156,37 +139,8 @@ The app automatically uses the first available AI provider:
 
 2. **OpenAI** (fallback if `OPENAI_API_KEY` is set)
    - Model: `gpt-3.5-turbo`
-   - Change to `gpt-4o` in `ai_assistant.py` for better answers
 
 3. **Rule-based** (works with no API keys)
-
----
-
-## Deploy to Streamlit Cloud
-
-### Step 1: Prepare Repository
-Your code is already on GitHub: `https://github.com/HASADKHAN76/ai-sales-profit-analyzer`
-
-### Step 2: Deploy
-1. Go to [share.streamlit.io](https://share.streamlit.io)
-2. Sign in with GitHub
-3. Click "New app"
-4. Select:
-   - Repository: `HASADKHAN76/ai-sales-profit-analyzer`
-   - Branch: `main`
-   - Main file: `app.py`
-
-### Step 3: Add Secrets
-In the app settings, add your secrets:
-
-```toml
-GEMINI_API_KEY = "AIzaSy..."
-```
-
-### Step 4: Deploy!
-Click "Deploy" and your app will be live in minutes!
-
-**Live URL:** `https://your-app-name.streamlit.app`
 
 ---
 
