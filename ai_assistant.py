@@ -10,9 +10,9 @@ Supports:
 
 from __future__ import annotations
 
-import os
 import re
 from typing import Generator, Optional
+from app_config import get_setting
 
 SYSTEM_PROMPT_TEMPLATE = """You are RetailBrain AI — an expert Business Analytics & Management Assistant.
 You specialize in retail, gym, coaching, and service business analytics.
@@ -40,7 +40,7 @@ Key areas you can help with:
 def _build_openai_client():
     try:
         from openai import OpenAI  # type: ignore
-        api_key = os.getenv("OPENAI_API_KEY", "")
+        api_key = get_setting("OPENAI_API_KEY", "")
         if not api_key:
             return None
         return OpenAI(api_key=api_key)
@@ -54,7 +54,7 @@ def _build_openai_client():
 def _build_gemini_client():
     try:
         from google import genai  # type: ignore
-        api_key = os.getenv("GEMINI_API_KEY", "")
+        api_key = get_setting("GEMINI_API_KEY", "")
         if not api_key:
             return None
         client = genai.Client(api_key=api_key)

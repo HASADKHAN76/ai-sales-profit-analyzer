@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 import database as db
 import business_management as bm
+from ui_utils import show_friendly_error
 
 # Design tokens
 C = {
@@ -216,7 +217,7 @@ def _render_record_sale_form(business_id: int, user_id: int):
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Error recording sale: {e}")
+                show_friendly_error("Unable to record sale right now.", "transactions.record_sale", e)
 
 
 def _show_receipt(transaction_id: int):

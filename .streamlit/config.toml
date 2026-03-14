@@ -1,0 +1,12 @@
+[client]
+showErrorDetails = true
+
+[server]
+runOnSave = true
+
+[theme]
+base = "dark"
+primaryColor = "#6366f1"
+backgroundColor = "#080d1a"
+secondaryBackgroundColor = "#0d1526"
+textColor = "#e2e8f0"

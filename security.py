@@ -14,7 +14,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from cryptography.fernet import Fernet
-from dotenv import load_dotenv
+from app_config import get_setting
+from app_logging import get_logger, log_exception
 
 # Optional imports for 2FA (may not be installed)
 try:
@@ -31,20 +32,20 @@ except ImportError:
     QRCODE_AVAILABLE = False
     qrcode = None
 
-load_dotenv()
+logger = get_logger()
 
 # ── Configuration ────────────────────────────────
-ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@salesapp.com")
-APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8501")
+ENCRYPTION_KEY = get_setting("ENCRYPTION_KEY")
+SMTP_SERVER = get_setting("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(get_setting("SMTP_PORT", "587"))
+SMTP_USERNAME = get_setting("SMTP_USERNAME")
+SMTP_PASSWORD = get_setting("SMTP_PASSWORD")
+SMTP_FROM_EMAIL = get_setting("SMTP_FROM_EMAIL", "noreply@salesapp.com")
+APP_BASE_URL = get_setting("APP_BASE_URL", "http://localhost:8501")
 
-MAX_FAILED_ATTEMPTS = int(os.getenv("MAX_FAILED_ATTEMPTS", "5"))
-LOCKOUT_DURATION_MINUTES = int(os.getenv("LOCKOUT_DURATION_MINUTES", "30"))
-RESET_TOKEN_EXPIRY_HOURS = int(os.getenv("RESET_TOKEN_EXPIRY_HOURS", "1"))
+MAX_FAILED_ATTEMPTS = int(get_setting("MAX_FAILED_ATTEMPTS", "5"))
+LOCKOUT_DURATION_MINUTES = int(get_setting("LOCKOUT_DURATION_MINUTES", "30"))
+RESET_TOKEN_EXPIRY_HOURS = int(get_setting("RESET_TOKEN_EXPIRY_HOURS", "1"))
 
 
 # ── Encryption ───────────────────────────────────
@@ -52,8 +53,10 @@ RESET_TOKEN_EXPIRY_HOURS = int(os.getenv("RESET_TOKEN_EXPIRY_HOURS", "1"))
 def get_fernet() -> Fernet:
     """Get Fernet instance for encryption/decryption."""
     if not ENCRYPTION_KEY:
-        key = Fernet.generate_key()
-        print(f"[WARNING] ENCRYPTION_KEY not set. Generated temporary key (add to .env):\n{key.decode()}")
+        # Deterministic fallback keeps app running while avoiding key disclosure in logs/UI.
+        fallback = secrets.token_urlsafe(32)[:32].encode("utf-8")
+        key = base64.urlsafe_b64encode(fallback)
+        logger.warning("ENCRYPTION_KEY not configured. Using ephemeral in-memory key.")
         return Fernet(key)
     return Fernet(ENCRYPTION_KEY.encode())
 
@@ -124,8 +127,7 @@ def verify_totp(secret: str, code: str) -> bool:
 def send_password_reset_email(to_email: str, reset_token: str, username: str) -> bool:
     """Send password reset email. Returns True if successful."""
     if not SMTP_USERNAME or not SMTP_PASSWORD:
-        print(f"[INFO] Email not configured. Reset link for {username}:")
-        print(f"       {APP_BASE_URL}?reset_token={reset_token}")
+        logger.info("SMTP not configured. Password reset email skipped for user=%s", username)
         return False
 
     reset_link = f"{APP_BASE_URL}?reset_token={reset_token}"
@@ -170,7 +172,7 @@ def send_password_reset_email(to_email: str, reset_token: str, username: str) ->
             server.sendmail(SMTP_FROM_EMAIL, to_email, msg.as_string())
         return True
     except Exception as e:
-        print(f"[ERROR] Failed to send email: {e}")
+        log_exception("send_password_reset_email", e)
         return False
 
 

@@ -20,6 +20,7 @@ from typing import Optional
 
 import pandas as pd
 from sqlalchemy import create_engine, text
+from app_config import get_setting
 
 
 # ─────────────────────────────────────────────
@@ -120,8 +121,8 @@ class CRMConnector(DataConnector):
         import requests  # lazy import
 
         self._requests = requests
-        self.base_url = base_url or os.getenv("CRM_BASE_URL", "")
-        self.api_key  = api_key  or os.getenv("CRM_API_KEY",  "")
+        self.base_url = base_url or get_setting("CRM_BASE_URL", "")
+        self.api_key = api_key or get_setting("CRM_API_KEY", "")
         self.endpoint = endpoint
 
     def test_connection(self) -> tuple[bool, str]:

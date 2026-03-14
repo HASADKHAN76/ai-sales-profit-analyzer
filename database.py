@@ -297,6 +297,70 @@ def init_db():
             UNIQUE (class_id, member_id)
         );
 
+        -- ══════════════════════════════════════════════════════════════════════════════
+        -- COACHING-SPECIFIC TABLES
+        -- ══════════════════════════════════════════════════════════════════════════════
+
+        CREATE TABLE IF NOT EXISTS coaching_students (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            business_id     INTEGER NOT NULL,
+            student_code    TEXT    NOT NULL,
+            first_name      TEXT    NOT NULL,
+            last_name       TEXT    NOT NULL,
+            email           TEXT,
+            phone           TEXT,
+            guardian_name   TEXT,
+            joined_on       TEXT    NOT NULL DEFAULT (date('now')),
+            is_active       INTEGER NOT NULL DEFAULT 1,
+            created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+            updated_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+            UNIQUE (business_id, student_code)
+        );
+
+        CREATE TABLE IF NOT EXISTS coaching_courses (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            business_id     INTEGER NOT NULL,
+            course_name     TEXT    NOT NULL,
+            instructor_name TEXT,
+            monthly_fee     REAL    NOT NULL DEFAULT 0,
+            duration_months INTEGER NOT NULL DEFAULT 3,
+            is_active       INTEGER NOT NULL DEFAULT 1,
+            created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+            updated_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS coaching_enrollments (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            business_id     INTEGER NOT NULL,
+            student_id      INTEGER NOT NULL,
+            course_id       INTEGER NOT NULL,
+            enrolled_on     TEXT    NOT NULL DEFAULT (date('now')),
+            status          TEXT    NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'dropped')),
+            created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES coaching_students(id) ON DELETE CASCADE,
+            FOREIGN KEY (course_id) REFERENCES coaching_courses(id) ON DELETE CASCADE,
+            UNIQUE (student_id, course_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS coaching_fee_payments (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            business_id     INTEGER NOT NULL,
+            student_id      INTEGER NOT NULL,
+            course_id       INTEGER NOT NULL,
+            amount_paid     REAL    NOT NULL,
+            payment_month   TEXT    NOT NULL,
+            payment_date    TEXT    NOT NULL DEFAULT (date('now')),
+            payment_method  TEXT    NOT NULL CHECK (payment_method IN ('cash', 'card', 'digital', 'bank_transfer', 'check')),
+            notes           TEXT,
+            created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (business_id) REFERENCES businesses(id) ON DELETE CASCADE,
+            FOREIGN KEY (student_id) REFERENCES coaching_students(id) ON DELETE CASCADE,
+            FOREIGN KEY (course_id) REFERENCES coaching_courses(id) ON DELETE CASCADE
+        );
+
         -- Indexes for performance
         CREATE INDEX IF NOT EXISTS idx_businesses_owner ON businesses(owner_id);
         CREATE INDEX IF NOT EXISTS idx_business_users_business ON business_users(business_id);
@@ -319,6 +383,11 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_gym_classes_date ON gym_classes(class_date);
         CREATE INDEX IF NOT EXISTS idx_gym_class_bookings_business ON gym_class_bookings(business_id);
         CREATE INDEX IF NOT EXISTS idx_gym_class_bookings_class ON gym_class_bookings(class_id);
+
+        CREATE INDEX IF NOT EXISTS idx_coaching_students_business ON coaching_students(business_id);
+        CREATE INDEX IF NOT EXISTS idx_coaching_courses_business ON coaching_courses(business_id);
+        CREATE INDEX IF NOT EXISTS idx_coaching_enrollments_business ON coaching_enrollments(business_id);
+        CREATE INDEX IF NOT EXISTS idx_coaching_fees_business ON coaching_fee_payments(business_id);
         """)
         _migrate_users_table(conn)
         _migrate_gym_members_table(conn)
@@ -1387,6 +1456,174 @@ def get_gym_membership_expiring_soon(business_id: int, days_ahead: int = 7) -> l
             ORDER BY gm.end_date ASC
         """, (business_id, days_ahead)).fetchall()
         return [dict(r) for r in rows]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# COACHING MANAGEMENT FUNCTIONS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def create_coaching_student(
+    business_id: int,
+    student_code: str,
+    first_name: str,
+    last_name: str,
+    email: str = None,
+    phone: str = None,
+    guardian_name: str = None,
+) -> int:
+    with get_db() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO coaching_students
+            (business_id, student_code, first_name, last_name, email, phone, guardian_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (business_id, student_code, first_name, last_name, email, phone, guardian_name),
+        )
+        return cursor.lastrowid
+
+
+def get_coaching_students(business_id: int, active_only: bool = True) -> list[dict]:
+    with get_db() as conn:
+        where_clause = "WHERE business_id = ?"
+        params = [business_id]
+        if active_only:
+            where_clause += " AND is_active = 1"
+
+        rows = conn.execute(
+            f"""
+            SELECT * FROM coaching_students
+            {where_clause}
+            ORDER BY first_name, last_name
+            """,
+            params,
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def create_coaching_course(
+    business_id: int,
+    course_name: str,
+    instructor_name: str = None,
+    monthly_fee: float = 0,
+    duration_months: int = 3,
+) -> int:
+    with get_db() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO coaching_courses
+            (business_id, course_name, instructor_name, monthly_fee, duration_months)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (business_id, course_name, instructor_name, monthly_fee, duration_months),
+        )
+        return cursor.lastrowid
+
+
+def get_coaching_courses(business_id: int, active_only: bool = True) -> list[dict]:
+    with get_db() as conn:
+        where_clause = "WHERE business_id = ?"
+        params = [business_id]
+        if active_only:
+            where_clause += " AND is_active = 1"
+
+        rows = conn.execute(
+            f"""
+            SELECT * FROM coaching_courses
+            {where_clause}
+            ORDER BY course_name
+            """,
+            params,
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def enroll_student_in_course(business_id: int, student_id: int, course_id: int) -> int:
+    with get_db() as conn:
+        cursor = conn.execute(
+            """
+            INSERT OR IGNORE INTO coaching_enrollments
+            (business_id, student_id, course_id)
+            VALUES (?, ?, ?)
+            """,
+            (business_id, student_id, course_id),
+        )
+        return cursor.lastrowid
+
+
+def get_coaching_enrollments(business_id: int) -> list[dict]:
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT e.*, s.student_code, s.first_name, s.last_name, c.course_name, c.monthly_fee
+            FROM coaching_enrollments e
+            JOIN coaching_students s ON e.student_id = s.id
+            JOIN coaching_courses c ON e.course_id = c.id
+            WHERE e.business_id = ?
+            ORDER BY e.enrolled_on DESC
+            """,
+            (business_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def record_coaching_fee_payment(
+    business_id: int,
+    student_id: int,
+    course_id: int,
+    amount_paid: float,
+    payment_month: str,
+    payment_method: str,
+    notes: str = None,
+) -> int:
+    with get_db() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO coaching_fee_payments
+            (business_id, student_id, course_id, amount_paid, payment_month, payment_method, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (business_id, student_id, course_id, amount_paid, payment_month, payment_method, notes),
+        )
+        return cursor.lastrowid
+
+
+def get_coaching_fee_payments(business_id: int, limit: int = 100) -> list[dict]:
+    with get_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT p.*, s.student_code, s.first_name, s.last_name, c.course_name
+            FROM coaching_fee_payments p
+            JOIN coaching_students s ON p.student_id = s.id
+            JOIN coaching_courses c ON p.course_id = c.id
+            WHERE p.business_id = ?
+            ORDER BY p.payment_date DESC, p.created_at DESC
+            LIMIT ?
+            """,
+            (business_id, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_coaching_summary(business_id: int) -> dict:
+    with get_db() as conn:
+        students = conn.execute(
+            "SELECT COUNT(*) FROM coaching_students WHERE business_id = ? AND is_active = 1",
+            (business_id,),
+        ).fetchone()[0]
+        courses = conn.execute(
+            "SELECT COUNT(*) FROM coaching_courses WHERE business_id = ? AND is_active = 1",
+            (business_id,),
+        ).fetchone()[0]
+        revenue = conn.execute(
+            "SELECT COALESCE(SUM(amount_paid), 0) FROM coaching_fee_payments WHERE business_id = ?",
+            (business_id,),
+        ).fetchone()[0]
+        return {
+            "active_students": students,
+            "active_courses": courses,
+            "fee_revenue": revenue,
+        }
 
 
 # Initialize on import

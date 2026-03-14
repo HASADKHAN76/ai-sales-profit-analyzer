@@ -6,6 +6,7 @@ Business registration, selection, and management for multi-business platform.
 import streamlit as st
 from typing import Optional
 import database as db
+from ui_utils import show_friendly_error
 
 # Design tokens matching app.py
 C = {
@@ -133,7 +134,7 @@ def render_business_setup():
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Error creating business: {e}")
+                show_friendly_error("Unable to create business right now.", "render_business_setup", e)
 
     return None
 
@@ -271,7 +272,7 @@ def render_business_settings():
                     st.success("✅ Business updated successfully!")
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error updating business: {e}")
+                    show_friendly_error("Unable to update business settings right now.", "render_business_settings.update_business", e)
 
     with tab2:
         st.markdown("**Team Members**")
@@ -319,7 +320,7 @@ def render_business_settings():
                                 st.success(f"✅ Added {new_user['username']} as {new_member_role}")
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"Error adding team member: {e}")
+                                show_friendly_error("Unable to add team member right now.", "render_business_settings.add_team_member", e)
                         else:
                             st.error("User not found with that email address")
 

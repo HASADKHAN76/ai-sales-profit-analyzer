@@ -10,15 +10,16 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from dotenv import load_dotenv
 
 import database as db
 import security as sec
+from app_config import get_setting
+from app_logging import get_logger, log_exception
 
-load_dotenv()
+logger = get_logger()
 
-# Secret key for JWT - generate once and store in .env for production
-JWT_SECRET = os.getenv("JWT_SECRET", "sales-app-secret-key-change-in-production")
+# Secret key for JWT (must be provided in secrets/environment for production)
+JWT_SECRET = get_setting("JWT_SECRET", "replace-me-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
 
@@ -97,7 +98,14 @@ def validate_file(filename: str, file_size: int) -> str | None:
 
 # ── Auth Operations ──────────────────────────────
 
-def register(username: str, email: str, password: str, role: str = "user") -> tuple[bool, str]:
+def register(
+    username: str,
+    email: str,
+    password: str,
+    role: str = "user",
+    business_name: str | None = None,
+    business_type: str | None = None,
+) -> tuple[bool, str]:
     """Register a new user. Returns (success, message)."""
     # Validate inputs
     err = validate_username(username)
@@ -116,10 +124,21 @@ def register(username: str, email: str, password: str, role: str = "user") -> tu
     if db.get_user_by_email(email):
         return False, "Email already registered."
 
-    # Create user
-    hashed = hash_password(password)
-    user_id = db.create_user(username, email, hashed, role)
-    return True, f"Account created successfully! Welcome, {username}."
+    try:
+        hashed = hash_password(password)
+        user_id = db.create_user(username, email, hashed, role)
+
+        if business_name and business_type:
+            db.create_business(
+                name=business_name.strip(),
+                business_type=business_type,
+                owner_id=user_id,
+            )
+
+        return True, f"Account created successfully! Welcome, {username}."
+    except Exception as exc:
+        log_exception("register", exc)
+        return False, "Unable to create account right now. Please try again."
 
 
 def login(username: str, password: str, totp_code: str = None) -> tuple[bool, str, str | None, bool]:
@@ -229,7 +248,7 @@ def ensure_default_admin():
         admin = conn.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1").fetchone()
         if not admin:
             register("admin", "admin@salesapp.com", "admin123", role="admin")
-            print("Default admin created: admin / admin123")
+            logger.warning("Default admin account created. Change credentials immediately.")
 
 
 # ── Password Reset ───────────────────────────────

@@ -8,6 +8,7 @@ import pandas as pd
 from typing import Optional
 import database as db
 import business_management as bm
+from ui_utils import show_friendly_error
 
 # Design tokens
 C = {
@@ -320,7 +321,7 @@ def _render_add_product_service_form(business_id: int):
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Error adding item: {e}")
+                show_friendly_error("Unable to add item right now.", "products_services.add_item", e)
 
 
 def _render_edit_product_service_form(item: dict):
@@ -365,7 +366,7 @@ def _render_edit_product_service_form(item: dict):
                     st.session_state[f"edit_item_{item['id']}"] = False
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error updating item: {e}")
+                    show_friendly_error("Unable to update item right now.", "products_services.update_item", e)
 
         with col_cancel:
             if st.form_submit_button("❌ Cancel", use_container_width=True):
@@ -418,7 +419,7 @@ def _render_stock_management_form(item: dict):
                     st.session_state[f"manage_stock_{item['id']}"] = False
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error updating stock: {e}")
+                    show_friendly_error("Unable to update stock right now.", "products_services.update_stock", e)
 
         with col_cancel:
             if st.form_submit_button("❌ Cancel", use_container_width=True):

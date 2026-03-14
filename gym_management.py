@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, date
 from typing import Optional
 import database as db
 import business_management as bm
+from ui_utils import show_friendly_error
 
 # Design tokens
 C = {
@@ -385,7 +386,7 @@ def _render_add_member_form(business_id: int):
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Error adding member: {e}")
+                show_friendly_error("Unable to add member right now.", "gym_management.add_member", e)
 
 
 def _render_edit_member_form(member: dict):
@@ -431,7 +432,7 @@ def _render_edit_member_form(member: dict):
                     st.session_state[f'edit_member_{member["id"]}'] = False
                     st.rerun()
                 except Exception as e:
-                    st.error(f"Error updating member: {e}")
+                    show_friendly_error("Unable to update member right now.", "gym_management.update_member", e)
 
         with col_cancel:
             if st.form_submit_button("❌ Cancel", use_container_width=True):
@@ -586,7 +587,7 @@ def _render_new_membership_form(business_id: int):
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Error creating membership: {e}")
+                show_friendly_error("Unable to create membership right now.", "gym_management.create_membership", e)
 
 
 def render_gym_day_passes_page(business_id: int, user_role: str):
@@ -743,7 +744,7 @@ def _render_add_equipment_form(business_id: int):
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Error adding equipment: {e}")
+                show_friendly_error("Unable to add equipment right now.", "gym_management.add_equipment", e)
 
 
 def render_gym_reports_page(business_id: int):

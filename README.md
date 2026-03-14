@@ -1,6 +1,6 @@
-# RetailBrain AI — Retail & E-commerce Analytics Platform
+# Sales Analytics Dashboard with AI Assistant
 
-An AI-powered sales analytics dashboard for retail and e-commerce businesses, built with:
+An AI-powered sales analytics dashboard built with Streamlit, featuring secure authentication and intelligent business insights.
 
 | Layer | Technology |
 |---|---|
@@ -8,7 +8,7 @@ An AI-powered sales analytics dashboard for retail and e-commerce businesses, bu
 | Data processing | pandas, NumPy |
 | Visualisations | Plotly |
 | AI assistant | Google Gemini 2.5 Flash (free tier) + OpenAI fallback + rule-based |
-| Authentication | bcrypt + JWT + 2FA |
+| Authentication | bcrypt + JWT |
 | Data ingestion | CSV upload, SQLAlchemy, REST CRM connector |
 
 ---
@@ -21,22 +21,20 @@ An AI-powered sales analytics dashboard for retail and e-commerce businesses, bu
 pip install -r requirements.txt
 ```
 
-### 2. Configure AI (Optional but Recommended)
+### 2. Configure Environment Variables
 
-**Option 1: Google Gemini (FREE - Recommended)**
-
-```bash
-# Get free API key from https://makersuite.google.com/app/apikey
-echo "GEMINI_API_KEY=your-gemini-key-here" > .env
-```
-
-**Option 2: OpenAI (Paid)**
+Create a `.env` file with your API keys and secrets:
 
 ```bash
-echo "OPENAI_API_KEY=sk-..." >> .env
+# Required for production
+JWT_SECRET=replace-with-strong-random-secret
+
+# Optional AI providers (Gemini is recommended - it's free!)
+GEMINI_API_KEY=your-gemini-key-here
+OPENAI_API_KEY=sk-your-openai-key-here
 ```
 
-The app works without any API key using a built-in rule-based assistant.
+The app works without AI keys using a built-in rule-based assistant.
 
 ### 3. Run the app
 
@@ -46,9 +44,11 @@ streamlit run app.py
 
 Open <http://localhost:8501> in your browser.
 
----
+Default admin credentials (change immediately):
+- Username: `admin`
+- Password: `admin123`
 
-## CSV Format
+## Features
 
 The uploaded CSV must contain these columns (names are case-insensitive):
 
@@ -93,7 +93,6 @@ The uploaded CSV must contain these columns (names are case-insensitive):
 ### User Management
 - Secure login with bcrypt password hashing
 - JWT session tokens
-- Two-factor authentication (2FA) support
 - Admin panel for user management
 
 ---

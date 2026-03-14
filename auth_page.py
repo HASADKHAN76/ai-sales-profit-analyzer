@@ -6,6 +6,7 @@ Includes forgot password and 2FA support.
 
 import streamlit as st
 import auth
+import business_management as bm
 
 # Design tokens
 C = {
@@ -18,6 +19,7 @@ C = {
     "text":     "#e2e8f0",
     "muted":    "#64748b",
     "rose":     "#f43f5e",
+    "cyan":     "#06b6d4",
 }
 
 AUTH_CSS = f"""
@@ -212,7 +214,7 @@ def _render_forgot_password():
             else:
                 success, message = auth.request_password_reset(email)
                 st.success(message)
-                st.info("Check your terminal/console for the reset link if email is not configured.")
+                st.info("If email delivery is configured, reset instructions will be sent shortly.")
 
     if st.button("Back to Login", use_container_width=True):
         st.session_state.pop("show_forgot_password", None)
@@ -254,14 +256,29 @@ def _render_register():
         email = st.text_input("Email", placeholder="your@email.com")
         password = st.text_input("Password", type="password", placeholder="Min 6 characters")
         password2 = st.text_input("Confirm Password", type="password", placeholder="Re-enter password")
+        business_name = st.text_input("Business Name", placeholder="Acme Fitness")
+        business_type = st.selectbox(
+            "Business Type",
+            options=list(bm.BUSINESS_TYPES.keys()),
+            format_func=lambda x: bm.BUSINESS_TYPES[x]["name"],
+        )
         submitted = st.form_submit_button("Create Account", use_container_width=True, type="primary")
 
         if submitted:
             if password != password2:
                 st.error("Passwords do not match.")
                 return
+            if not business_name.strip():
+                st.error("Business name is required.")
+                return
 
-            success, message = auth.register(username, email, password)
+            success, message = auth.register(
+                username,
+                email,
+                password,
+                business_name=business_name,
+                business_type=business_type,
+            )
             if success:
                 st.success(message + " You can now sign in.")
             else:
@@ -270,8 +287,22 @@ def _render_register():
 
 def render_user_sidebar(user: dict):
     """Show user info and logout button in sidebar."""
-    role_color = C["emerald"] if user["role"] == "admin" else C["indigo"]
-    role_label = "ADMIN" if user["role"] == "admin" else "USER"
+    business_role = "staff"
+    selected_business_id = st.session_state.get("selected_business_id")
+    if selected_business_id:
+        matched_role = bm.check_business_access(user["id"], selected_business_id)
+        if matched_role:
+            business_role = matched_role
+
+    if user["role"] == "admin":
+        role_color = C["emerald"]
+        role_label = "ADMIN"
+    elif business_role == "owner":
+        role_color = C["indigo"]
+        role_label = "BUSINESS OWNER"
+    else:
+        role_color = C["cyan"]
+        role_label = "STAFF"
 
     # Add 2FA badge if enabled
     has_2fa = auth.has_2fa_enabled(user["id"])
